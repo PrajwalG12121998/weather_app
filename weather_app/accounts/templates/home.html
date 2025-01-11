@@ -62,13 +62,14 @@
 
         <!-- Weather Info Section -->
         {% if weather %}
-            <div class="weather-info">
+            <div id="weather_info">
                 <h2 class="text-center">Weather Information</h2>
                 <p><strong>Location:</strong> {{ weather.city }}</p>
                 <p><strong>Temperature:</strong> {{ weather.temperature }}°C</p>
                 <p><strong>Weather:</strong> {{ weather.weather_description }}</p>
                 <p><strong>Humidity:</strong> {{ weather.humidity }}%</p>
                 <p><strong>Wind Speed:</strong> {{ weather.wind_speed }} m/s</p>
+                <button id="delete_button" class="btn btn-danger mt-3">Delete Weather Data</button>
             </div>
         {% endif %}
     </div>
@@ -113,6 +114,32 @@
                 }
             });
 
+            
+            // Fetch latest cities when the past city dropdown is clicked
+            $('#past_city').on('focus', function() {
+                $.ajax({
+                    url: '{% url "fetch_cities" %}', // Django URL for fetching cities
+                    method: 'GET',
+                    success: function(data) {
+                        if (data.cities && data.cities.length > 0) {
+                            // Clear existing options in the dropdown
+                            $('#past_city').empty();
+
+                            // Add the default option
+                            $('#past_city').append('<option value="">Select a city</option>');
+
+                            // Populate the dropdown with the latest cities
+                            data.cities.forEach(function(city) {
+                                $('#past_city').append(`<option value="${city}">${city}</option>`);
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Failed to fetch cities:', error);
+                    }
+                });
+            });
+
             // Handling selection from the dropdown for past cities
             $('#past_city').change(function() {
                 var selectedCity = $(this).val();
@@ -132,7 +159,34 @@
                                 <p><strong>Weather:</strong> ${data.weather_description}</p>
                                 <p><strong>Humidity:</strong> ${data.humidity}%</p>
                                 <p><strong>Wind Speed:</strong> ${data.wind_speed} m/s</p>
+                                <button id="delete_button" class="btn btn-danger mt-3">Delete Weather Data</button>
                             `);
+                        }
+                    });
+                }
+            });
+
+            // Delete button functionality
+            $(document).on('click', '#delete_button', function() {
+                if (confirm('Are you sure you want to delete this weather data?')) {
+                    const city = $('#city').val(); // Get the city name
+                    $.ajax({
+                        url: '{% url "delete_weather" %}', // Replace with your Django view URL
+                        method: 'POST',
+                        data: {
+                            'csrfmiddlewaretoken': '{{ csrf_token }}',
+                            'city': city
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Weather data deleted successfully!');
+                                $('#weather_info').html('<p class="text-muted">Weather data was deleted.</p>');
+                            } else {
+                                alert('Failed to delete weather data. Please try again.');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert('An error occurred while deleting the weather data.');
                         }
                     });
                 }

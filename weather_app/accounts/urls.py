@@ -8,5 +8,6 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('fetch-cities/', views.fetch_cities, name='fetch_cities'),
     path('fetch-weather/', views.fetch_weather, name='fetch_weather'),
-    path('fetch_weather_from_db/', views.fetch_weather_from_db, name='fetch_weather_from_db')
+    path('fetch_weather_from_db/', views.fetch_weather_from_db, name='fetch_weather_from_db'),
+    path('delete_weather/', views.delete_weather, name='delete_weather')
 ]

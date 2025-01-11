@@ -120,6 +120,19 @@ def home(request):
     
     return render(request, 'home.html', {'weather': weather_data, 'past_searches': past_searches})
 
+def delete_weather(request):
+    if request.method == 'POST':
+        city = request.POST.get('city')  
+        if city:
+            try:
+                # Delete the record from the database
+                WeatherRequest.objects.filter(city=city).delete()
+                return JsonResponse({'success': True})
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': 'City not provided'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
 @login_required
 def user_logout(request):
     logout(request)
