@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+
+    <!-- Load static files -->
+    {% load static %}
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+    <!-- jQuery UI CSS (for autocomplete) -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="text-center mb-4">Weather App</h1>
+
+        <!-- Weather Form -->
+        <form method="POST" class="mb-5">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <div class="mb-3">
+                        <label for="city" class="form-label">Enter City</label>
+                        <input type="text" id="city" class="form-control" name="city" autocomplete="off" required>
+                        <small id="cityHelp" class="form-text text-muted">Start typing a city name...</small>
+                    </div>
+                    <br>
+                    <button type="submit" class="btn btn-primary w-100">Get Weather</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Weather Info Section -->
+        {% if weather %}
+            <div class="weather-info">
+                <h2 class="text-center">Weather Information</h2>
+                <p><strong>Location:</strong> {{ weather.name }}</p>
+                <p><strong>Temperature:</strong> {{ weather.main.temp }}°C</p>
+                <p><strong>Weather:</strong> {{ weather.weather.0.description }}</p>
+                <p><strong>Humidity:</strong> {{ weather.main.humidity }}%</p>
+                <p><strong>Wind Speed:</strong> {{ weather.wind.speed }} m/s</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS (for dropdown, etc.) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#city').autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: '{% url "fetch_cities" %}',
+                        method: 'GET',
+                        data: { 'input': request.term },
+                        success: function(data) {
+                            response(data.cities.map(function(city) {
+                                return {
+                                    label: city.name,
+                                    value: city.name,
+                                    lat: city.lat,
+                                    lon: city.lon
+                                };
+                            }));
+                        }
+                    });
+                },
+                minLength: 3,
+                select: function(event, ui) {
+                    $('#city').val(ui.item.value);
+                    let lat = ui.item.lat;
+                    let lon = ui.item.lon;
+
+                    $.ajax({
+                        url: '{% url "fetch_weather" %}',
+                        method: 'GET',
+                        data: { 'lat': lat, 'lon': lon },
+                        success: function(data) {
+                            //alert('Weather fetched successfully!');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
