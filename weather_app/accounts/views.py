@@ -63,38 +63,62 @@ def fetch_cities(request):
     city_list = [{'name': city['city'], 'lat': city['latitude'], 'lon': city['longitude']} for city in cities]
     return JsonResponse({'cities': city_list})
 
+def fetch_weather_from_db(request):
+    city = request.GET.get('city')
+    weather_data = WeatherRequest.objects.filter(user=request.user, city=city).first()
+
+    if weather_data:
+        data = {
+            'city': weather_data.city,
+            'temperature': weather_data.temperature,
+            'weather_description': weather_data.weather_description,
+            'humidity': weather_data.humidity,
+            'wind_speed': weather_data.wind_speed,
+        }
+        return JsonResponse(data)
+    else:
+        return JsonResponse({'error': 'Weather data not found'}, status=404)
+
 @login_required
 def home(request):
     weather_data = None
+    past_searches = WeatherRequest.objects.filter(user=request.user)  # Fetch past searches for the logged-in user
+    
     if request.method == 'POST':
-        city_name = request.POST['city']
-        geo_url = f"{GEO_API_URL}/cities?minPopulation=10000&namePrefix={city_name}"
-        response = requests.get(geo_url, headers=GEO_API_HEADERS)
-        city_data = response.json().get('data', [])[0]  # Fetch city data
+        if 'city' in request.POST:  # User is requesting new weather data
+            city_name = request.POST['city']
+            geo_url = f"{GEO_API_URL}/cities?minPopulation=10000&namePrefix={city_name}"
+            response = requests.get(geo_url, headers=GEO_API_HEADERS)
+            city_data = response.json().get('data', [])[0]  # Fetch city data
 
-        if city_data:
-            lat = city_data['latitude']
-            lon = city_data['longitude']
-            
-            # Fetch weather data based on latitude and longitude
-            weather_url = f"{WEATHER_API_URL}?lat={lat}&lon={lon}&appid={settings.OPENWEATHERMAP_API_KEY}&units=metric"
-            weather_response = requests.get(weather_url)
-            weather_data = weather_response.json()
+            if city_data:
+                lat = city_data['latitude']
+                lon = city_data['longitude']
+                
+                # Fetch weather data based on latitude and longitude
+                weather_url = f"{WEATHER_API_URL}?lat={lat}&lon={lon}&appid={settings.OPENWEATHERMAP_API_KEY}&units=metric"
+                weather_response = requests.get(weather_url)
+                weather_data = weather_response.json()
 
-            # Save the weather request data into the database
-            weather_request = WeatherRequest(
-                user=request.user,  # Store the logged-in user
-                city=city_name,
-                latitude=lat,
-                longitude=lon,
-                temperature=weather_data['main']['temp'],
-                weather_description=weather_data['weather'][0]['description'],
-                humidity=weather_data['main']['humidity'],
-                wind_speed=weather_data['wind']['speed'],
-            )
-            weather_request.save()
-
-    return render(request, 'home.html', {'weather': weather_data})
+                # Save the weather request data into the database
+                weather_request = WeatherRequest(
+                    user=request.user,  # Store the logged-in user
+                    city=city_name,
+                    latitude=lat,
+                    longitude=lon,
+                    temperature=weather_data['main']['temp'],
+                    weather_description=weather_data['weather'][0]['description'],
+                    humidity=weather_data['main']['humidity'],
+                    wind_speed=weather_data['wind']['speed'],
+                )
+                weather_request.save()
+                weather_data = weather_request
+        
+        elif 'past_city' in request.POST:  # User selects a city from past searches
+            past_city_name = request.POST['past_city']
+            weather_data = WeatherRequest.objects.filter(user=request.user, city=past_city_name).first()
+    
+    return render(request, 'home.html', {'weather': weather_data, 'past_searches': past_searches})
 
 @login_required
 def user_logout(request):
